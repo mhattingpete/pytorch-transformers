@@ -30,6 +30,7 @@ from torch.nn import CrossEntropyLoss, MSELoss
 
 from .modeling_utils import (WEIGHTS_NAME, CONFIG_NAME, PretrainedConfig, PreTrainedModel,
                              prune_linear_layer, add_start_docstrings)
+from .dynamic_conv_layers import LightweightConv, DynamicConv
 
 logger = logging.getLogger(__name__)
 
@@ -348,7 +349,12 @@ class BertSelfOutput(nn.Module):
 class BertAttention(nn.Module):
     def __init__(self, config):
         super(BertAttention, self).__init__()
-        self.self = BertSelfAttention(config)
+        if config.attention_type == 'light':
+            self.self = LightweightConv(config)
+        elif config.attention_type == 'dynamic':
+            self.self = DynamicConv(config)
+        else:
+            self.self = BertSelfAttention(config)
         self.output = BertSelfOutput(config)
 
     def prune_heads(self, heads):
@@ -425,7 +431,12 @@ class BertEncoder(nn.Module):
         super(BertEncoder, self).__init__()
         self.output_attentions = config.output_attentions
         self.output_hidden_states = config.output_hidden_states
-        self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
+        layer = []
+        for i in range(config.num_hidden_layers):
+            if config.kernel_sizes is not None:
+                config.kernel_size = config.kernel_sizes[i]
+            layer.append(BertLayer(config))
+        self.layer = nn.ModuleList(layer)
 
     def forward(self, hidden_states, attention_mask, head_mask=None):
         all_hidden_states = ()
@@ -660,6 +671,11 @@ class BertModel(BertPreTrainedModel):
 
         self.apply(self.init_weights)
 
+        if config.attention_type in ('light', 'dynamic'):
+            self.transpose_input_output = True
+        else:
+            self.transpose_input_output = False
+
     def _resize_token_embeddings(self, new_num_tokens):
         old_embeddings = self.embeddings.word_embeddings
         new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens)
@@ -711,9 +727,13 @@ class BertModel(BertPreTrainedModel):
             head_mask = [None] * self.config.num_hidden_layers
 
         embedding_output = self.embeddings(input_ids, position_ids=position_ids, token_type_ids=token_type_ids)
+        if self.transpose_input_output:
+            embedding_output = embedding_output.transpose(0, 1)
         encoder_outputs = self.encoder(embedding_output,
                                        extended_attention_mask,
                                        head_mask=head_mask)
+        if self.transpose_input_output:
+            encoder_outputs[0] = encoder_outputs[0].transpose(0, 1)
         sequence_output = encoder_outputs[0]
         pooled_output = self.pooler(sequence_output)
 

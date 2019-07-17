@@ -1,0 +1,63 @@
+*****     Sample     *****
+Sample received f1: 0
+Question was: Hvad kaldes et primtals divisorer?
+Context was: Et primtal er et positivt heltal større end 1, der ikke er deleligt med andre hele positive tal end 1 og tallet selv, kaldet de trivielle divisorer. Ethvert positivt heltal kan skrives som et produkt af primtal på entydig vis (når der ses bort fra rækkefølgen af primtallene). En sådan opskrivning kaldes tallets primfaktoropløsning, og de indgående primtal kaldes tallets primfaktorer. F.eks. er 60 = 2² × 3 × 5. Det faktum, at ethvert positivt helt tal entydigt kan skrives som et produkt af primfaktorer, kaldes aritmetikkens fundamentalsætning.
+Predicted answer: de indgående primtal
+But actual answer was one of: ['trivielle divisorer']
+
+*****     Sample     *****
+Sample received f1: 0
+Question was: Hvilken sætning handler om tal som entydigt kan skrives som et produkt af primfaktorer?
+Context was: Et primtal er et positivt heltal større end 1, der ikke er deleligt med andre hele positive tal end 1 og tallet selv, kaldet de trivielle divisorer. Ethvert positivt heltal kan skrives som et produkt af primtal på entydig vis (når der ses bort fra rækkefølgen af primtallene). En sådan opskrivning kaldes tallets primfaktoropløsning, og de indgående primtal kaldes tallets primfaktorer. F.eks. er 60 = 2² × 3 × 5. Det faktum, at ethvert positivt helt tal entydigt kan skrives som et produkt af primfaktorer, kaldes aritmetikkens fundamentalsætning.
+Predicted answer: ethvert positivt
+But actual answer was one of: ['aritmetikkens fundamentalsætning']
+
+*****     Sample     *****
+Sample received f1: 0
+Question was: Hvorfor er 1 ikke et primtal i definitionen?
+Context was: Bemærk, at 1 ikke er et primtal i definitionen ovenfor, da der jo netop af et primtal kræves, at det er større end 1. Man kunne godt have defineret 1 til at være et primtal, men det gør den videre udvikling af teorien mere besværlig, idet mange sætninger kun gælder for primtal større end eller lig 2. Det gælder for eksempel for den tidligere oplyste entydighed af primfaktoropløsninger. Hvis 1 var defineret til at være et primtal, ville fx 60 kunne skrives som et produkt af primtal på uendelig mange måder. Derfor er det naturligt at definere 1 til ikke at være et primtal. Primtal studeres indenfor talteori og danner basis for mange krypteringsalgoritmer.
+Predicted answer: oven
+But actual answer was one of: ['af et primtal kræves, at det er større end 1']
+
+*****     Sample     *****
+Sample received f1: 0
+Question was: Hvad ville være besværligt hvis 1 var et primtal?
+Context was: Bemærk, at 1 ikke er et primtal i definitionen ovenfor, da der jo netop af et primtal kræves, at det er større end 1. Man kunne godt have defineret 1 til at være et primtal, men det gør den videre udvikling af teorien mere besværlig, idet mange sætninger kun gælder for primtal større end eller lig 2. Det gælder for eksempel for den tidligere oplyste entydighed af primfaktoropløsninger. Hvis 1 var defineret til at være et primtal, ville fx 60 kunne skrives som et produkt af primtal på uendelig mange måder. Derfor er det naturligt at definere 1 til ikke at være et primtal. Primtal studeres indenfor talteori og danner basis for mange krypteringsalgoritmer.
+Predicted answer: mere besværlig
+But actual answer was one of: ['teorien']
+
+*****     Sample     *****
+Sample received f1: 0
+Question was: Hvad beviste Euklid?
+Context was: Euklid beviste ca. 300 f.kr., at der findes uendeligt mange primtal. Beviset anføres ofte at være et modstridsbevis, idet man antager at man kender alle primtal. Ganger man alle disse tal sammen og lægger en til, får man et tal, der enten er et ikke-kendt primtal, eller som har en ikke kendt primfaktor (idet ingen af dem man kender jo kan gå op). Men faktisk gik hans bevisførelse ud på at hvis man har en hvilken som helst mængde af primtal, kan man altid finde mindst ét primtal til - fremgangsmåden svarer til ovenstående. Og dette kan selvfølgelig gentages i det uendelige. Flere matematikere har lavet andre beviser for, at der er uendelig mange primtal, specielt har Euler vist, at summen af primtallenes reciprokke værdier ikke konvergerer, men går mod uendelig.
+Predicted answer: ca. 300 f.kr.
+But actual answer was one of: ['at der findes uendeligt mange primtal']
+
+*****     Sample     *****
+Sample received f1: 0
+Question was: Hvilken kraft holder Månen i bane om Jorden?
+Context was: De fleste har hørt historien om, hvordan Isaac Newton sov under et træ og pludselig fik et æble i hovedet – og derved opdagede tyngdekraften. Der er dog imidlertid intet, der rent faktisk tyder på, at det var sådan, han opdagede tyngdekraften. Han spurgte sig selv, om den kraft, der fik det til at falde til jorden, og den kraft der holdt Månen i bane om Jorden, var én og samme kraft – Efter analyser over længere tid, fremkom hans tre kendte love samt gravitationsloven.
+Predicted answer: én og samme
+But actual answer was one of: ['tyngdekraften']
+
+*****     Sample     *****
+Sample received f1: 0.19999999999999998
+Question was: Hvad er en kraft?
+Context was: En kraft er "noget", som ændrer et legemes hastighed, form eller retning. Eksempelvis når du åbner en dør, påvirkes døren af den kraft, din arm trækker med og bliver dermed sat i bevægelse. En kraft måles i newton (tidligere kilopond), også betegnet med "N". Kraft er defineret som masse gange acceleration. Dvs. at hvis du eksempelvis ønsker at bestemme den kraft, du påvirker døren med for at få den til at åbne, skal du kende dørens masse (vægt) og den acceleration, hvormed du har åbnet døren. Hvis du ganger disse to faktorer med hinanden, får du den kraft, du har påvirket døren med.
+Predicted answer: noget"
+But actual answer was one of: ['"noget", som ændrer et legemes hastighed, form eller retning']
+
+*****     Sample     *****
+Sample received f1: 0
+Question was: Hvad betegnes newton med?
+Context was: En kraft er "noget", som ændrer et legemes hastighed, form eller retning. Eksempelvis når du åbner en dør, påvirkes døren af den kraft, din arm trækker med og bliver dermed sat i bevægelse. En kraft måles i newton (tidligere kilopond), også betegnet med "N". Kraft er defineret som masse gange acceleration. Dvs. at hvis du eksempelvis ønsker at bestemme den kraft, du påvirker døren med for at få den til at åbne, skal du kende dørens masse (vægt) og den acceleration, hvormed du har åbnet døren. Hvis du ganger disse to faktorer med hinanden, får du den kraft, du har påvirket døren med.
+Predicted answer: kilopond
+But actual answer was one of: ['N']
+
+*****     Sample     *****
+Sample received f1: 0
+Question was: Hvad er summen af kræfterne som påvirker et legeme i stilstand?
+Context was: Da Newton i sin tid analyserede kræfter, opstillede han tre kendte love. Den første siger, at hvis summen af de kræfter, som påvirker et legeme, er lig med 0, vil legemet enten være i stilstand (stå stille) eller bevæge sig med konstant hastighed. Newtons anden lov fastslår, at kraften svarer til produktet af massen og accelerationen. Newtons tredje lov siger, at aktion er lig med reaktion. Med dette menes, at hvis du eksempelvis kaster en bold ind i en væg, vil den blive påvirket af en lige så stor modsat rettet kraft som den kraft, den ramte væggen med. Det er derfor bolden vil flyve bagud, så snart den har ramt væggen.
+Predicted answer: stå stille
+But actual answer was one of: ['0']
+
