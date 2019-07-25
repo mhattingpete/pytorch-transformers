@@ -31,6 +31,7 @@ from torch.nn import CrossEntropyLoss, MSELoss
 from .modeling_utils import (WEIGHTS_NAME, CONFIG_NAME, PretrainedConfig, PreTrainedModel,
                              prune_linear_layer, add_start_docstrings)
 from .dynamic_conv_layers import LightweightConv, DynamicConv
+from .memory import MemoryLayer
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +195,7 @@ class BertConfig(PretrainedConfig):
                  type_vocab_size=2,
                  initializer_range=0.02,
                  layer_norm_eps=1e-12,
+                 attention_type="self",
                  **kwargs):
         super(BertConfig, self).__init__(**kwargs)
         if isinstance(vocab_size_or_config_json_file, str) or (sys.version_info[0] == 2
@@ -215,6 +217,7 @@ class BertConfig(PretrainedConfig):
             self.type_vocab_size = type_vocab_size
             self.initializer_range = initializer_range
             self.layer_norm_eps = layer_norm_eps
+            self.attention_type = attention_type
         else:
             raise ValueError("First argument must be either a vocabulary size (int)"
                              "or the path to a pretrained model config file (str)")
@@ -414,14 +417,23 @@ class BertLayer(nn.Module):
     def __init__(self, config):
         super(BertLayer, self).__init__()
         self.attention = BertAttention(config)
-        self.intermediate = BertIntermediate(config)
-        self.output = BertOutput(config)
+        self.insert_memory_layer = config.insert_memory_layer
+        if self.insert_memory_layer:
+        	self.output = MemoryLayer(config)
+        	self.LayerNorm = BertLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        else:
+	        self.intermediate = BertIntermediate(config)
+	        self.output = BertOutput(config)
 
     def forward(self, hidden_states, attention_mask, head_mask=None):
         attention_outputs = self.attention(hidden_states, attention_mask, head_mask)
         attention_output = attention_outputs[0]
-        intermediate_output = self.intermediate(attention_output)
-        layer_output = self.output(intermediate_output, attention_output)
+        if self.insert_memory_layer:
+        	intermediate_output = self.output(attention_output)
+        	layer_output = self.LayerNorm(intermediate_output + attention_output)
+        else:
+	        intermediate_output = self.intermediate(attention_output)
+	        layer_output = self.output(intermediate_output, attention_output)
         outputs = (layer_output,) + attention_outputs[1:]  # add attentions if we output them
         return outputs
 
@@ -435,6 +447,10 @@ class BertEncoder(nn.Module):
         for i in range(config.num_hidden_layers):
             if config.kernel_sizes is not None:
                 config.kernel_size = config.kernel_sizes[i]
+            if i in config.memory_layer_place:
+            	config.insert_memory_layer = True
+            else:
+            	config.insert_memory_layer = False
             layer.append(BertLayer(config))
         self.layer = nn.ModuleList(layer)
 
