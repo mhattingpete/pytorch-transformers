@@ -2,7 +2,7 @@ import sys
 import math
 import numpy as np
 import torch
-
+import argparse
 
 # load FAISS GPU library if available (dramatically accelerates the nearest neighbor search)
 try:
@@ -161,3 +161,18 @@ if FAISS_AVAILABLE:
 else:
     sys.stderr.write("Switching to standard nearest neighbors search implementation, this will be significantly slower.\n")
     get_knn = get_knn_pytorch
+
+FALSY_STRINGS = {'off', 'false', '0'}
+TRUTHY_STRINGS = {'on', 'true', '1'}
+
+def bool_flag(s):
+    """
+    Parse boolean arguments from the command line.
+    """
+    if s.lower() in FALSY_STRINGS:
+        return False
+    elif s.lower() in TRUTHY_STRINGS:
+        return True
+    else:
+        raise argparse.ArgumentTypeError("Invalid value for a boolean flag!")
+

@@ -1,1 +1,1 @@
-from .memory import HashingMemory
+from .memory import MemoryLayer

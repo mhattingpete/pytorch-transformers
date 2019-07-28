@@ -11,10 +11,11 @@ from tempfile import TemporaryDirectory
 
 from torch.utils.data import DataLoader, Dataset, RandomSampler
 from torch.utils.data.distributed import DistributedSampler
+from torch.optim import SparseAdam
 from tqdm import tqdm
 
 from pytorch_transformers import WEIGHTS_NAME, CONFIG_NAME
-from pytorch_transformers.modeling_bert import BertForPreTraining
+from pytorch_transformers.modeling_bert import BertForPreTraining, BertConfig
 from pytorch_transformers.tokenization_bert import BertTokenizer
 from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
 
@@ -125,8 +126,8 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('--pregenerated_data', type=Path, required=True)
     parser.add_argument('--output_dir', type=Path, required=True)
-    parser.add_argument("--bert_model", type=str, required=True, help="Bert pre-trained model selected in the list: bert-base-uncased, "
-                             "bert-large-uncased, bert-base-cased, bert-base-multilingual, bert-base-chinese.")
+    parser.add_argument("--config_file", type=str, required=True, help="Bert config file.")
+    parser.add_argument("--bert_model", type=str, required=True, help="Bert pre-trained model")
     parser.add_argument("--do_lower_case", action="store_true")
     parser.add_argument("--reduce_memory", action="store_true",
                         help="Store training data as on-disc memmaps to massively reduce memory usage")
@@ -171,6 +172,7 @@ def main():
                         type=int,
                         default=42,
                         help="random seed for initialization")
+    parser.add_argument("--sparse_optim", action="store_true")
     args = parser.parse_args()
 
     assert args.pregenerated_data.is_dir(), \
@@ -234,7 +236,9 @@ def main():
         num_train_optimization_steps = num_train_optimization_steps // torch.distributed.get_world_size()
 
     # Prepare model
-    model = BertForPreTraining.from_pretrained(args.bert_model)
+    config = BertConfig.from_json_file(args.config_file)
+    config.mem_sparse = args.sparse_optim
+    model = BertForPreTraining(config)
     if args.fp16:
         model.half()
     model.to(device)
@@ -274,10 +278,15 @@ def main():
         else:
             optimizer = FP16_Optimizer(optimizer, static_loss_scale=args.loss_scale)
     else:
-        optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+        if args.sparse_optim is False:
+            optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+        else:
+            optimizer = SparseAdam(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
     scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=num_train_optimization_steps)
 
     global_step = 0
+    num_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logging.info(f"  Model size is {num_parameters}")
     logging.info("***** Running training *****")
     logging.info(f"  Num examples = {total_train_examples}")
     logging.info("  Batch size = %d", args.train_batch_size)

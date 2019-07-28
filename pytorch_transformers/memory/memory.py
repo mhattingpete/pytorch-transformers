@@ -5,32 +5,31 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from ...utils import bool_flag
-from .utils import get_knn_faiss, cartesian_product
+from .utils import get_knn_faiss, cartesian_product, bool_flag
 from .utils import get_gaussian_keys, get_uniform_keys
 from .query import QueryIdentity, QueryMLP, QueryConv
 
 MemoryDefaultDict = {
-    "mem_implementation" : "fast",
+    "mem_implementation" : "pq_fast",
     "mem_grouped_conv" : False,
     "mem_values_optimizer" : "",
     "mem_sparse" : False,
     "mem_input2d" : False,
     "mem_k_dim" : 16,
     "mem_v_dim" : -1,
-    "mem_heads" : 1,
-    "mem_knn" : 10,
+    "mem_heads" : 4,
+    "mem_knn" : 32,
     "mem_share_values" : False,
     "mem_shuffle_indices" : False,
     "mem_shuffle_query" : False,
     "mem_modulo_size" : -1,
     "mem_keys_type" : "uniform",
-    "mem_n_keys" : 512,
+    "mem_n_keys" : 1024,
     "mem_keys_normalized_init" : False,
-    "mem_keys_learn" : False,
+    "mem_keys_learn" : True,
     "mem_use_different_keys" : False,
     "mem_query_detach_input" : False,
-    "mem_query_layer_sizes" : "",
+    "mem_query_layer_sizes" : "0,512,0",
     "mem_query_kernel_sizes" : "",
     "mem_query_bias" : True,
     "mem_query_batchnorm" : True,
@@ -48,17 +47,18 @@ MemoryDefaultDict = {
     "mem_value_dropout" : 0
 }
 
-class MemoryConfig(object):
-    def __init__(self, config):
-        defaults = MemoryDefaultDict
-        for key, value in defaults.items():
-            if key not in config.__dict__:
-                config.__dict__[key] = value
-        return config
+def add_memory_config(config):
+    defaults = MemoryDefaultDict
+    for key, value in defaults.items():
+        if key not in config.__dict__:
+            config.__dict__[key] = value
+    return config
 
 class MemoryLayer(nn.Module):
     def __init__(self, config):
-        mem_config = MemoryConfig(config)
+        super().__init__()
+        mem_config = add_memory_config(config)
+        HashingMemory.check_params(mem_config)
         self.memory = HashingMemory.build(mem_config.hidden_size, mem_config.hidden_size, mem_config)
 
     def forward(self, hidden_states):
@@ -389,8 +389,8 @@ class HashingMemory(nn.Module):
 
         # optimization
         assert params.mem_grouped_conv is False or params.mem_multi_query_net
-        params.mem_values_optimizer = params.optimizer if params.mem_values_optimizer == '' else params.mem_values_optimizer
-        params.mem_values_optimizer = params.mem_values_optimizer.replace('adam', 'sparseadam') if params.mem_sparse else params.mem_values_optimizer
+        #params.mem_values_optimizer = params.optimizer if params.mem_values_optimizer == '' else params.mem_values_optimizer
+        #params.mem_values_optimizer = params.mem_values_optimizer.replace('adam', 'sparseadam') if params.mem_sparse else params.mem_values_optimizer
 
         # even number of key dimensions for product quantization
         assert params.mem_k_dim >= 2
