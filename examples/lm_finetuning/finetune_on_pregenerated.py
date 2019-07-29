@@ -151,11 +151,9 @@ def main():
     parser.add_argument('--fp16',
                         action='store_true',
                         help="Whether to use 16-bit float precision instead of 32-bit")
-    parser.add_argument('--loss_scale',
-                        type=float, default=0,
-                        help="Loss scaling to improve fp16 numeric stability. Only used when fp16 set to True.\n"
-                        "0 (default value): dynamic loss scaling.\n"
-                        "Positive power of 2: static loss scaling value.\n")
+    parser.add_argument('--fp16_opt_level', type=str, default='O1',
+                        help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
+                             "See details at https://nvidia.github.io/apex/amp.html")
     parser.add_argument("--warmup_steps", 
                         default=0, 
                         type=int,
@@ -242,15 +240,6 @@ def main():
     if args.fp16:
         model.half()
     model.to(device)
-    if args.local_rank != -1:
-        try:
-            from apex.parallel import DistributedDataParallel as DDP
-        except ImportError:
-            raise ImportError(
-                "Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
-        model = DDP(model)
-    elif n_gpu > 1:
-        model = torch.nn.DataParallel(model)
 
     # Prepare optimizer
     param_optimizer = list(model.named_parameters())
@@ -270,32 +259,29 @@ def main():
             {'params': [p for n, p in param_optimizer if any(nd in n for nd in memory_params)],
             'weight_decay': 0.0}
         ]
-    optimizers = {}
-    schedulers = {}
+    optimizers = []
+    schedulers = []
+    optimizers.append(AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon))
+    schedulers.append(WarmupLinearSchedule(optimizers[0], warmup_steps=args.warmup_steps, t_total=num_train_optimization_steps))
+    if memory_params:
+        optimizers.append(SparseAdam(memory_optimizer_parameters, lr=args.learning_rate, eps=args.adam_epsilon))
+        schedulers.append(WarmupLinearSchedule(optimizers[1], warmup_steps=args.warmup_steps, t_total=num_train_optimization_steps))
     if args.fp16:
         try:
-            from apex.optimizers import FP16_Optimizer
-            from apex.optimizers import FusedAdam
+            from apex import amp
         except ImportError:
-            raise ImportError(
-                "Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
+            raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
+        model, optimizers = amp.initialize(model, optimizers, opt_level=args.fp16_opt_level)
 
-        optimizer = FusedAdam(optimizer_grouped_parameters,
-                              lr=args.learning_rate,
-                              bias_correction=False,
-                              max_grad_norm=1.0)
-        if args.loss_scale == 0:
-            optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
-        else:
-            optimizer = FP16_Optimizer(optimizer, static_loss_scale=args.loss_scale)
-    else:
-        optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-    optimizers['model'] = optimizer
-    if memory_params:
-        optimizer_memory = SparseAdam(memory_optimizer_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-        optimizers['memory'] = optimizer_memory
-        schedulers['memory'] = WarmupLinearSchedule(optimizer_memory, warmup_steps=args.warmup_steps, t_total=num_train_optimization_steps)
-    schedulers['model'] = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=num_train_optimization_steps)
+    # multi-gpu training (should be after apex fp16 initialization)
+    if args.n_gpu > 1:
+        model = torch.nn.DataParallel(model)
+
+    # Distributed training (should be after apex fp16 initialization)
+    if args.local_rank != -1:
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
+                                                          output_device=args.local_rank,
+                                                          find_unused_parameters=True)
 
     global_step = 0
     num_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -326,7 +312,8 @@ def main():
                 if args.gradient_accumulation_steps > 1:
                     loss = loss / args.gradient_accumulation_steps
                 if args.fp16:
-                    optimizer['model'].backward(loss)
+                	with amp.scale_loss(loss, optimizers) as scaled_loss:
+                    	scaled_loss.backward()
                 else:
                     loss.backward()
                 tr_loss += loss.item()
@@ -336,11 +323,11 @@ def main():
                 mean_loss = tr_loss * args.gradient_accumulation_steps / nb_tr_steps
                 pbar.set_postfix_str(f"Loss: {mean_loss:.5f}")
                 if (step + 1) % args.gradient_accumulation_steps == 0:
-                    for k in schedulers:
-                        scheduler[k].step()  # Update learning rate schedule
-                    for k in optimizers:
-                        optimizers[k].step()
-                        optimizers[k].zero_grad()
+                    for scheduler in schedulers:
+                        scheduler.step()  # Update learning rate schedule
+                    for optimizer in optimizers:
+                        optimizer.step()
+                        optimizer.zero_grad()
                     global_step += 1
 
     # Save a trained model
