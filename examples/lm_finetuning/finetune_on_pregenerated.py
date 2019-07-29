@@ -237,8 +237,6 @@ def main():
     config = BertConfig.from_json_file(args.config_file)
     config.mem_sparse = args.sparse_optim
     model = BertForPreTraining(config)
-    if args.fp16:
-        model.half()
     model.to(device)
 
     # Prepare optimizer
@@ -274,7 +272,7 @@ def main():
         model, optimizers = amp.initialize(model, optimizers, opt_level=args.fp16_opt_level)
 
     # multi-gpu training (should be after apex fp16 initialization)
-    if args.n_gpu > 1:
+    if n_gpu > 1:
         model = torch.nn.DataParallel(model)
 
     # Distributed training (should be after apex fp16 initialization)
@@ -312,8 +310,8 @@ def main():
                 if args.gradient_accumulation_steps > 1:
                     loss = loss / args.gradient_accumulation_steps
                 if args.fp16:
-                	with amp.scale_loss(loss, optimizers) as scaled_loss:
-                    	scaled_loss.backward()
+                    with amp.scale_loss(loss, optimizers) as scaled_loss:
+                        scaled_loss.backward()
                 else:
                     loss.backward()
                 tr_loss += loss.item()
