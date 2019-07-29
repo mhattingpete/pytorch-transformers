@@ -445,10 +445,14 @@ class BertEncoder(nn.Module):
         self.output_hidden_states = config.output_hidden_states
         layer = []
         for i in range(config.num_hidden_layers):
-            if config.kernel_sizes is not None:
-                config.kernel_size = config.kernel_sizes[i]
-            if i in config.memory_layer_place:
-            	config.insert_memory_layer = True
+            if hasattr(config,'kernel_sizes'):
+                if config.kernel_sizes is not None:
+                    config.kernel_size = config.kernel_sizes[i]
+            if hasattr(config,'memory_layer_place'):
+                if i in config.memory_layer_place:
+            	    config.insert_memory_layer = True
+                else:
+                    config.insert_memory_layer = False
             else:
             	config.insert_memory_layer = False
             layer.append(BertLayer(config))

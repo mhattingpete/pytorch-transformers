@@ -255,12 +255,23 @@ def main():
     # Prepare optimizer
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+    use_memory = hasattr(config,'memory_layer_place')
+    if args.sparse_optim and use_memory:
+        memory_params = ['memory.values.weight']
+    else:
+        memory_params = []
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay) and not any(nd in n for nd in memory_params)],
          'weight_decay': 0.01},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay) and not any(nd in n for nd in memory_params)], 'weight_decay': 0.0}
     ]
-
+    if use_memory:
+        memory_optimizer_parameters = [
+            {'params': [p for n, p in param_optimizer if any(nd in n for nd in memory_params)],
+            'weight_decay': 0.0}
+        ]
+    optimizers = {}
+    schedulers = {}
     if args.fp16:
         try:
             from apex.optimizers import FP16_Optimizer
@@ -278,11 +289,13 @@ def main():
         else:
             optimizer = FP16_Optimizer(optimizer, static_loss_scale=args.loss_scale)
     else:
-        if args.sparse_optim is False:
-            optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-        else:
-            optimizer = SparseAdam(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-    scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=num_train_optimization_steps)
+        optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+    optimizers['model'] = optimizer
+    if memory_params:
+        optimizer_memory = SparseAdam(memory_optimizer_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+        optimizers['memory'] = optimizer_memory
+        schedulers['memory'] = WarmupLinearSchedule(optimizer_memory, warmup_steps=args.warmup_steps, t_total=num_train_optimization_steps)
+    schedulers['model'] = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=num_train_optimization_steps)
 
     global_step = 0
     num_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -313,7 +326,7 @@ def main():
                 if args.gradient_accumulation_steps > 1:
                     loss = loss / args.gradient_accumulation_steps
                 if args.fp16:
-                    optimizer.backward(loss)
+                    optimizer['model'].backward(loss)
                 else:
                     loss.backward()
                 tr_loss += loss.item()
@@ -323,9 +336,11 @@ def main():
                 mean_loss = tr_loss * args.gradient_accumulation_steps / nb_tr_steps
                 pbar.set_postfix_str(f"Loss: {mean_loss:.5f}")
                 if (step + 1) % args.gradient_accumulation_steps == 0:
-                    scheduler.step()  # Update learning rate schedule
-                    optimizer.step()
-                    optimizer.zero_grad()
+                    for k in schedulers:
+                        scheduler[k].step()  # Update learning rate schedule
+                    for k in optimizers:
+                        optimizers[k].step()
+                        optimizers[k].zero_grad()
                     global_step += 1
 
     # Save a trained model
