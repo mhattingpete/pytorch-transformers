@@ -131,3 +131,6 @@ examples/runs
 
 # Checkpoints
 *.bin
+
+# Guide
+train_models.txt

@@ -234,9 +234,14 @@ def main():
         num_train_optimization_steps = num_train_optimization_steps // torch.distributed.get_world_size()
 
     # Prepare model
-    config = BertConfig.from_json_file(args.config_file)
-    config.mem_sparse = args.sparse_optim
-    model = BertForPreTraining(config)
+    if os.path.isfile(args.config_file):
+        config = BertConfig.from_json_file(args.config_file)
+        config.mem_sparse = args.sparse_optim
+        model = BertForPreTraining(config)
+    elif os.path.isdir(args.config_file):
+        model = BertForPreTraining.from_pretrained(args.config_file)
+    else:
+        raise Exception("config_file must be either a path to the config_file or a dir where the config file is and a model checkpoint")
     model.to(device)
 
     # Prepare optimizer
