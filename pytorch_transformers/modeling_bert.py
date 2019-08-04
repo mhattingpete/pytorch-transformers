@@ -821,7 +821,7 @@ class BertForPreTraining(BertPreTrainedModel):
                                    self.bert.embeddings.word_embeddings)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
-                next_sentence_label=None, position_ids=None, head_mask=None):
+                next_sentence_label=None, position_ids=None, head_mask=None, output_loss_only=False):
         outputs = self.bert(input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
                             attention_mask=attention_mask, head_mask=head_mask)
 
@@ -835,7 +835,7 @@ class BertForPreTraining(BertPreTrainedModel):
             masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
             next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
             total_loss = masked_lm_loss + next_sentence_loss
-            outputs = (total_loss,) + outputs
+            outputs = (total_loss, ) if output_loss_only else (total_loss,) + outputs
 
         return outputs  # (loss), prediction_scores, seq_relationship_score, (hidden_states), (attentions)
 
@@ -1265,7 +1265,7 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         self.apply(self.init_weights)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None,
-                end_positions=None, position_ids=None, head_mask=None):
+                end_positions=None, position_ids=None, head_mask=None, output_loss_only=False):
         outputs = self.bert(input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
                             attention_mask=attention_mask, head_mask=head_mask)
         sequence_output = outputs[0]
@@ -1291,6 +1291,6 @@ class BertForQuestionAnswering(BertPreTrainedModel):
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
-            outputs = (total_loss,) + outputs
+            outputs = (total_loss, ) if output_loss_only else (total_loss,) + outputs
 
         return outputs  # (loss), start_logits, end_logits, (hidden_states), (attentions)
