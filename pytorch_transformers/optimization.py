@@ -209,7 +209,7 @@ class AdamWSparse(Optimizer):
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
         defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay,
                         correct_bias=correct_bias)
-        super(AdamW, self).__init__(params, defaults)
+        super().__init__(params, defaults)
 
     def step(self, closure=None):
         """Performs a single optimization step.
@@ -255,7 +255,7 @@ class AdamWSparse(Optimizer):
                 # original adam
                 exp_avg.mul_(beta1).add_(1.0 - beta1, grad)
                 exp_avg_sq.mul_(beta2).add_(grad.mul(grad).mul(1.0 - beta2))
-                denom = exp_avg_sq.sqrt().add_(group['eps'])
+                denom = exp_avg_sq.sqrt().add(group['eps'])
 
                 step_size = group['lr']
                 if group['correct_bias']:  # No bias correction for Bert
@@ -263,7 +263,7 @@ class AdamWSparse(Optimizer):
                     bias_correction2 = 1.0 - beta2 ** state['step']
                     step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
-                p.data.add_(exp_avg.div(denom).mul(-step_size))
+                p.data.addcdiv_(-step_size, exp_avg, denom)
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
