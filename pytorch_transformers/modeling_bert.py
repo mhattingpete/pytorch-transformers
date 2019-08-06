@@ -30,7 +30,7 @@ from torch.nn import CrossEntropyLoss, MSELoss
 
 from .modeling_utils import (WEIGHTS_NAME, CONFIG_NAME, PretrainedConfig, PreTrainedModel,
                              prune_linear_layer, add_start_docstrings)
-from .dynamic_conv_layers import LightweightConv, DynamicConv
+from .dynamic_conv import LightweightConv, DynamicConv
 from .memory import MemoryLayer
 
 logger = logging.getLogger(__name__)
