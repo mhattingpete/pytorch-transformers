@@ -1,0 +1,50 @@
+# 1. Download wikipedia dump
+
+# 2. Extract wikipedia dump
+python3 WikiExtractor.py /scratch/s144234/training_datasets/dawiki-20190601-pages-articles-multistream.xml.bz2 -o /scratch/s144234/training_datasets/dawiki --json --filter_disambig_pages
+
+# 3. Clean extracted wikidump
+python3 wikidump_cleaner.py --dirpath /scratch/s144234/training_datasets/enwiki --save_name /scratch/s144234/training_datasets/enwiki.txt --sample_frac 0.1
+
+# 4. Generate training data
+python3 pregenerate_training_data.py --train_corpus /scratch/s144234/training_datasets/en_da_wiki.txt --output_dir /scratch/s144234/training_datasets/pretraining_en_da_wiki --bert_model ../../../../configs/bert-base-multilingual-uncased-vocab.txt --epochs_to_generate 30 --do_lower_case --max_seq_len 512
+
+# 5. Pretrain model
+screen python3 finetune_on_pregenerated.py --pregenerated_data /scratch/s144234/training_datasets/pretraining_en_da_wiki/ --config_file ../../../../configs/en_da_wiki/pretrained_models/bert_self/bert_config.json --output_dir finetuned_lm/en_da_wiki/bert_self/ --epochs 30 --train_batch_size 256 --learning_rate 1e-4 --bert_model ../../../../configs/bert-base-multilingual-uncased-vocab.txt --do_lower_case
+
+# 6. Finetune model on SQuAD
+python3 run_squad.py --output_dir='../../../configs/en_da_wiki/finetuned_models/bert_self/en' --do_train --do_predict --num_train_epochs=5 --predict_file='/scratch/s144234/training_datasets/SQuAD/dev-v1.1.json' --train_file='/scratch/s144234/training_datasets/SQuAD/train-v1.1.json' --model_path='../../../configs/en_da_wiki/pretrained_models/bert_self' --train_batch_size=128 --predict_batch_size=128 --attention_type='self' --bert_model ../../../configs/bert-base-multilingual-uncased-vocab.txt --do_lower_case
+
+# 7. Move the prediction files
+mv configs/en_da_wiki/finetuned_models/bert_self/en/predictions.json evals/en_da_wiki/bert_self/en/predictions.json
+mv configs/en_da_wiki/finetuned_models/bert_self/en/nbest_predictions.json evals/en_da_wiki/bert_self/en/nbest_predictions.json
+mv configs/enwiki/finetuned_models/bert_dynamic/en/predictions.json evals/enwiki/bert_dynamic/en/predictions.json
+mv configs/enwiki/finetuned_models/bert_dynamic/en/nbest_predictions.json evals/enwiki/bert_dynamic/en/nbest_predictions.json
+
+# 8. Run to get the score
+python3 evaluate_squad_official.py '/scratch/s144234/training_datasets/SQuAD/dev-v1.1.json' 'evals/en_da_wiki/bert_self/en/predictions.json' 'evals/en_da_wiki/bert_self/en/results.txt'
+
+# 9. Predict model on DA SQuAD
+python3 run_squad.py --output_dir='../../../configs/en_da_wiki/finetuned_models/bert_self/da' --do_predict --predict_file='/scratch/s144234/training_datasets/SQuAD/da-dev-v1.1.json' --model_path='../../../configs/en_da_wiki/finetuned_models/bert_self/en' --predict_batch_size=128 --attention_type='self' --bert_model ../../../configs/bert-base-multilingual-uncased-vocab.txt --do_lower_case
+
+# 9.a Finetune model on DA SQuAD
+python3 run_squad.py --output_dir='../../../configs/en_da_wiki/finetuned_models/bert_self/da_trained' --do_train --do_predict --num_train_epochs=1 --predict_file='/scratch/s144234/training_datasets/SQuAD/da-dev-v1.1.json' --train_file='/scratch/s144234/training_datasets/SQuAD/da-train-v1.1.json' --model_path='../../../configs/en_da_wiki/finetuned_models/bert_self/en' --train_batch_size=128 --predict_batch_size=128 --attention_type='self' --bert_model ../../../configs/bert-base-multilingual-uncased-vocab.txt --do_lower_case --learning_rate=1e-5
+
+# 10. Move the prediction files
+mv configs/en_da_wiki/finetuned_models/bert_self/da/predictions.json evals/en_da_wiki/bert_self/da/predictions.json
+mv configs/en_da_wiki/finetuned_models/bert_self/da/nbest_predictions.json evals/en_da_wiki/bert_self/da/nbest_predictions.json
+
+# 11. Run to get the DA score
+python3 evaluate_squad_official.py '/scratch/s144234/training_datasets/SQuAD/da-dev-v1.1.json' 'evals/en_da_wiki/bert_self/da/predictions.json' 'evals/en_da_wiki/bert_self/da/results.txt'
+
+# 12. Compare mlm loss
+python3 test_on_pregenerated.py --pregenerated_data /scratch/s144234/training_datasets/pretraining_enwiki/ --model_path ../../../../configs/enwiki/pretrained_models/bert_self/ --epochs 1 --train_batch_size 64 --learning_rate 1e-4 --bert_model 'bert-base-ununcased'
+python3 test_on_pregenerated.py --pregenerated_data /scratch/s144234/training_datasets/pretraining_enwiki/ --model_path ../../../../configs/gutenberg/pretrained_models/bert_self/ --epochs 1 --train_batch_size 64 --learning_rate 1e-4 --bert_model 'bert-base-ununcased'
+
+
+########## NOT USED ANYMORE ##########
+### rm -r runs/squad1.1/squad1.1-QA-bert_dynamic_no_glu | python3 train_squad_qa.py --type='bert' --bs=64 --att_type='self' --no_glu --config_path='configs/pretrained_models'
+# Convert from Ignite checkpoint to state_dict checkpoint
+### python3 convert_model_checkpoint_to_checkpoint.py --model_save_path='runs/squad1.1/squad1.1-QA-bert_dynamic_no_glu/best_LL_model_9.pth' --output_checkpoint='configs/finetuned_models/bert_dynamic_no_glu/pytorch_model.bin'
+# Run to generate predictions
+### python3 eval_squad_qa.py --model_path='configs/finetuned_models/bert_dynamic_no_glu' --output_dir='evals/bert_dynamic_no_glu' --predict_file='/scratch/s144234/training_datasets/SQuAD/dev-v1.1.json' --batch_size=16
