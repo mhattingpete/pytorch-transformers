@@ -195,7 +195,6 @@ class BertConfig(PretrainedConfig):
                  type_vocab_size=2,
                  initializer_range=0.02,
                  layer_norm_eps=1e-12,
-                 attention_type="self",
                  **kwargs):
         super(BertConfig, self).__init__(**kwargs)
         if isinstance(vocab_size_or_config_json_file, str) or (sys.version_info[0] == 2
@@ -217,7 +216,6 @@ class BertConfig(PretrainedConfig):
             self.type_vocab_size = type_vocab_size
             self.initializer_range = initializer_range
             self.layer_norm_eps = layer_norm_eps
-            self.attention_type = attention_type
         else:
             raise ValueError("First argument must be either a vocabulary size (int)"
                              "or the path to a pretrained model config file (str)")
@@ -352,9 +350,10 @@ class BertSelfOutput(nn.Module):
 class BertAttention(nn.Module):
     def __init__(self, config):
         super(BertAttention, self).__init__()
-        if config.attention_type == 'light':
+        attention_type = getattr(config,'attention_type', None)
+        if attention_type == 'light':
             self.self = LightweightConv(config)
-        elif config.attention_type == 'dynamic':
+        elif attention_type == 'dynamic':
             self.self = DynamicConv(config)
         else:
             self.self = BertSelfAttention(config)
@@ -690,7 +689,8 @@ class BertModel(BertPreTrainedModel):
 
         self.apply(self.init_weights)
 
-        if config.attention_type in ('light', 'dynamic'):
+        attention_type = getattr(config,'attention_type', None)
+        if attention_type in ('light', 'dynamic'):
             self.transpose_input_output = True
         else:
             self.transpose_input_output = False
