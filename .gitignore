@@ -129,6 +129,7 @@ proc_data
 runs
 examples/runs
 
+<<<<<<< HEAD
 # Checkpoints
 *.bin
 
@@ -136,3 +137,8 @@ examples/runs
 
 # Comparisons
 self_attn_comparison.ipynb
+=======
+# data
+data
+serialization_dir
+>>>>>>> 7c0f2d0a6a8937063bb310fceb56ac57ce53811b
