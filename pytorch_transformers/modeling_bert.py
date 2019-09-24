@@ -29,10 +29,16 @@ from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 from .modeling_utils import (WEIGHTS_NAME, CONFIG_NAME, PretrainedConfig, PreTrainedModel,
                              prune_linear_layer, add_start_docstrings)
 from .dynamic_conv import LightweightConv, DynamicConv
 from .memory import MemoryLayer
+=======
+from .modeling_utils import PreTrainedModel, prune_linear_layer
+from .configuration_bert import BertConfig
+from .file_utils import add_start_docstrings
+>>>>>>> 7c0f2d0a6a8937063bb310fceb56ac57ce53811b
 =======
 from .modeling_utils import PreTrainedModel, prune_linear_layer
 from .configuration_bert import BertConfig
@@ -601,12 +607,15 @@ class BertModel(BertPreTrainedModel):
         self.pooler = BertPooler(config)
 
         self.init_weights()
+<<<<<<< HEAD
 
         attention_type = getattr(config,'attention_type', None)
         if attention_type in ('light', 'dynamic'):
             self.transpose_input_output = True
         else:
             self.transpose_input_output = False
+=======
+>>>>>>> 7c0f2d0a6a8937063bb310fceb56ac57ce53811b
 
     def _resize_token_embeddings(self, new_num_tokens):
         old_embeddings = self.embeddings.word_embeddings
@@ -730,11 +739,14 @@ class BertForPreTraining(BertPreTrainedModel):
                                    self.bert.embeddings.word_embeddings)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
                 next_sentence_label=None, position_ids=None, head_mask=None, output_loss_only=False):
         outputs = self.bert(input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
                             attention_mask=attention_mask, head_mask=head_mask)
 =======
+=======
+>>>>>>> 7c0f2d0a6a8937063bb310fceb56ac57ce53811b
     def forward(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
                 masked_lm_labels=None, next_sentence_label=None):
 
@@ -743,6 +755,9 @@ class BertForPreTraining(BertPreTrainedModel):
                             token_type_ids=token_type_ids,
                             position_ids=position_ids, 
                             head_mask=head_mask)
+<<<<<<< HEAD
+>>>>>>> 7c0f2d0a6a8937063bb310fceb56ac57ce53811b
+=======
 >>>>>>> 7c0f2d0a6a8937063bb310fceb56ac57ce53811b
 
         sequence_output, pooled_output = outputs[:2]
@@ -1170,10 +1185,13 @@ class BertForQuestionAnswering(BertPreTrainedModel):
                             head_mask=head_mask)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None,
                 end_positions=None, position_ids=None, head_mask=None, output_loss_only=False):
         outputs = self.bert(input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
                             attention_mask=attention_mask, head_mask=head_mask)
+=======
+>>>>>>> 7c0f2d0a6a8937063bb310fceb56ac57ce53811b
 =======
 >>>>>>> 7c0f2d0a6a8937063bb310fceb56ac57ce53811b
         sequence_output = outputs[0]
