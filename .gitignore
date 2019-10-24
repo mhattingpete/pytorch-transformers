@@ -118,6 +118,9 @@ dmypy.json
 # vscode
 .vscode
 
+# Pycharm
+.idea
+
 # TF code
 tensorflow_code
 
@@ -138,5 +141,8 @@ examples/runs
 self_attn_comparison.ipynb
 
 # data
-data
+/data
 serialization_dir
+
+# emacs
+*.*~
