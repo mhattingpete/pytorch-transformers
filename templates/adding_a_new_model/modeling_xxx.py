@@ -25,6 +25,8 @@ import logging
 import math
 import os
 import sys
+import copy
+import itertools
 from io import open
 
 import torch
@@ -284,7 +286,6 @@ class XxxModel(XxxPreTrainedModel):
 
         self.init_weights()
 
-    @property
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
 
